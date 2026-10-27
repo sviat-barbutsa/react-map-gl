@@ -3,7 +3,7 @@ import {expect, test} from 'vitest';
 import * as React from 'react';
 import {createRoot} from 'react-dom/client';
 import {act} from 'react-dom/test-utils';
-import {Map} from '@vis.gl/react-maplibre';
+import {Map, Marker} from '@vis.gl/react-maplibre';
 import Maplibre from '../../src/maplibre/maplibre';
 import {waitForMapLoad, actUntil} from '../utils/test-utils';
 
@@ -51,6 +51,36 @@ test('Map', async () => {
   expect(mapRef.current.getZoom(), 'zoom is updated').toBe(14);
 
   expect(onloadCalled, 'onLoad is called').toBe(1);
+
+  await act(() => root.unmount());
+});
+
+test('Map recreates its instance when an Activity becomes visible again', async () => {
+  const rootContainer = document.createElement('div');
+  const root = createRoot(rootContainer);
+  const mapRef = {current: null};
+
+  const render = mode =>
+    act(() =>
+      root.render(
+        <React.Activity mode={mode}>
+          <Map ref={mapRef} initialViewState={{longitude: -100, latitude: 40, zoom: 4}}>
+            <Marker longitude={-100} latitude={40} />
+          </Map>
+        </React.Activity>
+      )
+    );
+
+  await render('visible');
+  await waitForMapLoad(mapRef);
+  const firstMap = mapRef.current.getMap();
+
+  await render('hidden');
+  await render('visible');
+  await waitForMapLoad(mapRef);
+
+  expect(mapRef.current.getMap(), 'Map instance is recreated').not.toBe(firstMap);
+  expect(rootContainer.querySelector('.maplibregl-marker'), 'Marker is reattached').toBeTruthy();
 
   await act(() => root.unmount());
 });
