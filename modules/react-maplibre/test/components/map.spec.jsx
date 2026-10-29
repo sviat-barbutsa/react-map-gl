@@ -331,11 +331,15 @@ test('Map#controlled#scroll reaches maxZoom', async () => {
   await waitForMapLoad(mapRef);
 
   const canvas = mapRef.current.getCanvas();
+  let moveEndPromise;
   for (let i = 0; i < 60; i++) {
+    if (i === 59) {
+      moveEndPromise = new Promise(resolve => mapRef.current.once('moveend', resolve));
+    }
     canvas.dispatchEvent(new WheelEvent('wheel', {deltaY: -100, bubbles: true}));
     await act(() => sleep(50));
   }
-  await actUntil(resolveTest => mapRef.current.once('moveend', resolveTest));
+  await actUntil(resolveTest => moveEndPromise.then(resolveTest));
 
   expect(mapRef.current.getZoom()).toBe(18);
 
